@@ -5,14 +5,21 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+
 	"minicrm/internal/db"
 )
 
+var w fyne.Window
+
 func Run() {
 	a := app.NewWithID("minicrm")
+
+	// Inicializar base de datos
 	if err := db.Init(); err != nil {
-	panic(err)
-	w := a.NewWindow("Mini CRM")
+		panic(err)
+	}
+
+	w = a.NewWindow("Mini CRM")
 	w.Resize(fyne.NewSize(1200, 800))
 
 	tabs := container.NewAppTabs(
@@ -28,12 +35,10 @@ func Run() {
 	w.ShowAndRun()
 }
 
+// ----- Vistas base (placeholders) -----
+
 func dashboardView() fyne.CanvasObject {
 	return widget.NewLabel("Dashboard – KPIs y seguimiento general")
-}
-
-func clientesView() fyne.CanvasObject {
-	return widget.NewLabel("Clientes – Alta, edición, estado, etiquetas, notas")
 }
 
 func tareasView() fyne.CanvasObject {
@@ -49,5 +54,5 @@ func reportesView() fyne.CanvasObject {
 }
 
 func ajustesView() fyne.CanvasObject {
-	return widget.NewLabel("Ajustes – Backups, uso local, configuración")
+	return widget.NewLabel("Ajustes – Configuración general")
 }
