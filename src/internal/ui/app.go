@@ -5,10 +5,13 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+	"minicrm/internal/db"
 )
 
 func Run() {
 	a := app.NewWithID("minicrm")
+	if err := db.Init(); err != nil {
+	panic(err)
 	w := a.NewWindow("Mini CRM")
 	w.Resize(fyne.NewSize(1200, 800))
 
