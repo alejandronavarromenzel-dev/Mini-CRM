@@ -12,7 +12,6 @@ import (
 )
 
 func kanbanView() fyne.CanvasObject {
-	statuses := []string{"Por hacer", "En curso", "Hecho"}
 
 	makeColumn := func(status string) fyne.CanvasObject {
 		var tasks []models.Task
@@ -43,7 +42,8 @@ func kanbanView() fyne.CanvasObject {
 			if selected < 0 || selected >= len(tasks) {
 				return
 			}
-			next := nextStatus(status)
+
+			next := nextKanbanStatus(status)
 			_, _ = db.DB.Exec(
 				"UPDATE tasks SET status=? WHERE id=?",
 				next,
@@ -91,4 +91,15 @@ func loadKanbanTasks(status string) []models.Task {
 		out = append(out, t)
 	}
 	return out
+}
+
+func nextKanbanStatus(current string) string {
+	switch current {
+	case "Por hacer":
+		return "En curso"
+	case "En curso":
+		return "Hecho"
+	default:
+		return "Hecho"
+	}
 }
