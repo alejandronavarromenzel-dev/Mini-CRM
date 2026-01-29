@@ -13,6 +13,8 @@ import (
 
 func kanbanView() fyne.CanvasObject {
 
+	var refreshAll func()
+
 	makeColumn := func(status string) fyne.CanvasObject {
 		var tasks []models.Task
 		selected := -1
@@ -49,7 +51,7 @@ func kanbanView() fyne.CanvasObject {
 				next,
 				tasks[selected].ID,
 			)
-			refresh()
+			refreshAll()
 		})
 
 		refresh()
@@ -63,11 +65,26 @@ func kanbanView() fyne.CanvasObject {
 		)
 	}
 
-	return container.NewGridWithColumns(
-		3,
-		makeColumn("Por hacer"),
-		makeColumn("En curso"),
-		makeColumn("Hecho"),
+	colTodo := makeColumn("Por hacer")
+	colDoing := makeColumn("En curso")
+	colDone := makeColumn("Hecho")
+
+	refreshAll = func() {
+		colTodo.(*fyne.Container).Objects[4].(*widget.List).Refresh()
+		colDoing.(*fyne.Container).Objects[4].(*widget.List).Refresh()
+		colDone.(*fyne.Container).Objects[4].(*widget.List).Refresh()
+	}
+
+	refreshBtn := widget.NewButton("Refrescar", func() {
+		refreshAll()
+	})
+
+	grid := container.NewGridWithColumns(3, colTodo, colDoing, colDone)
+
+	return container.NewBorder(
+		container.NewHBox(widget.NewLabel("Kanban"), refreshBtn),
+		nil, nil, nil,
+		grid,
 	)
 }
 
