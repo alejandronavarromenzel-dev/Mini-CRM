@@ -17,9 +17,10 @@ import (
    ========================= */
 
 type taskBlock struct {
-	status string
-	list   *widget.List
-	tasks  []models.Task
+	status        string
+	list          *widget.List
+	tasks         []models.Task
+	selectedIndex int
 }
 
 /* =========================
@@ -57,7 +58,10 @@ func tareasView() fyne.CanvasObject {
    ========================= */
 
 func newTaskBlock(status string) *taskBlock {
-	b := &taskBlock{status: status}
+	b := &taskBlock{
+		status:        status,
+		selectedIndex: -1,
+	}
 
 	b.list = widget.NewList(
 		func() int { return len(b.tasks) },
@@ -76,11 +80,16 @@ func newTaskBlock(status string) *taskBlock {
 		},
 	)
 
+	b.list.OnSelected = func(id int) {
+		b.selectedIndex = id
+	}
+
 	return b
 }
 
 func (b *taskBlock) refresh() {
 	b.tasks = loadTasksByStatus(b.status)
+	b.selectedIndex = -1
 	b.list.Refresh()
 }
 
@@ -92,7 +101,7 @@ func (b *taskBlock) view(
 
 	btn := widget.NewButton(buttonLabel, func() {
 
-		id := b.list.Selected
+		id := b.selectedIndex
 		if id < 0 || id >= len(b.tasks) {
 			return
 		}
