@@ -24,7 +24,7 @@ func Run() {
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Dashboard", dashboardView()),
 		container.NewTabItem("Clientes", clientesView()),
-		container.NewTabItem("Tareas", tareasView()), // ← usa la real (tareas.go)
+		container.NewTabItem("Tareas", tareasView()),
 		container.NewTabItem("Kanban", kanbanView()),
 		container.NewTabItem("Reportes", reportesView()),
 		container.NewTabItem("Ajustes", ajustesView()),
@@ -34,20 +34,14 @@ func Run() {
 	w.ShowAndRun()
 }
 
-// ----- Vistas base -----
-
 func dashboardView() fyne.CanvasObject {
-	return widget.NewLabel("Dashboard – KPIs y seguimiento general")
-}
-
-func kanbanView() fyne.CanvasObject {
-	return widget.NewLabel("Kanban – Por hacer / En curso / Hecho")
+	return widget.NewLabel("Dashboard")
 }
 
 func reportesView() fyne.CanvasObject {
-	return widget.NewLabel("Reportes – Exportación Excel / CSV / PDF")
+	return widget.NewLabel("Reportes")
 }
 
 func ajustesView() fyne.CanvasObject {
-	return widget.NewLabel("Ajustes – Configuración general")
+	return widget.NewLabel("Ajustes")
 }
