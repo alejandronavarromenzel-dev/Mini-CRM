@@ -18,6 +18,7 @@ func tareasView() fyne.CanvasObject {
 	var selectedTask *models.Task
 
 	clientSelect := widget.NewSelect([]string{"Todos"}, nil)
+
 	refreshClients := func() {
 		clients := loadClients()
 		opts := []string{"Todos"}
@@ -59,7 +60,7 @@ func tareasView() fyne.CanvasObject {
 	}
 
 	addBtn := widget.NewButton("Nueva Tarea", func() {
-		showTaskForm(0, func() {
+		showTaskForm(func() {
 			refreshTasks()
 		})
 	})
@@ -85,7 +86,7 @@ func tareasView() fyne.CanvasObject {
 	return container.NewBorder(top, nil, nil, nil, list)
 }
 
-func showTaskForm(_ int64, onSave func()) {
+func showTaskForm(onSave func()) {
 	clients := loadClients()
 	clientNames := []string{}
 	clientMap := map[string]int64{}
@@ -136,4 +137,64 @@ func showProgressEdit(t *models.Task, onSave func()) {
 	dialog.ShowForm(
 		"Editar avance",
 		"Guardar",
-		"Ca
+		"Cancelar",
+		[]*widget.FormItem{{Text: "% Avance", Widget: entry}},
+		func(ok bool) {
+			if !ok {
+				return
+			}
+			p, _ := strconv.Atoi(entry.Text)
+			_, _ = db.DB.Exec(
+				"UPDATE tasks SET progress=? WHERE id=?",
+				p, t.ID,
+			)
+			onSave()
+		},
+		w,
+	)
+}
+
+/* ---------- queries ---------- */
+
+func loadAllTasks() []models.Task {
+	rows, err := db.DB.Query(`
+		SELECT t.id, c.name, t.title, t.progress
+		FROM tasks t
+		JOIN clients c ON c.id = t.client_id
+		ORDER BY c.name, t.title
+	`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var out []models.Task
+	for rows.Next() {
+		var t models.Task
+		rows.Scan(&t.ID, &t.ClientName, &t.Title, &t.Progress)
+		out = append(out, t)
+	}
+	return out
+}
+
+func loadTasksByClientName(name string) []models.Task {
+	rows, err := db.DB.Query(`
+		SELECT t.id, c.name, t.title, t.progress
+		FROM tasks t
+		JOIN clients c ON c.id = t.client_id
+		WHERE c.name=?
+		ORDER BY t.title
+	`, name)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var out []models.Task
+	for rows.Next() {
+		var t models.Task
+		rows.Scan(&t.ID, &t.ClientName, &t.Title, &t.Progress)
+		out = append(out, t)
+	}
+	return out
+}
