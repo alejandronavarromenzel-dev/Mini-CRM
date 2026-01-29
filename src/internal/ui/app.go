@@ -25,7 +25,7 @@ func Run() {
 		container.NewTabItem("Dashboard", dashboardView()),
 		container.NewTabItem("Clientes", clientesView()),
 		container.NewTabItem("Tareas", tareasView()),
-		container.NewTabItem("Kanban", kanbanView()),
+		container.NewTabItem("Tareas realizadas", tareasArchivadasView()),
 		container.NewTabItem("Reportes", reportesView()),
 		container.NewTabItem("Ajustes", ajustesView()),
 	)
