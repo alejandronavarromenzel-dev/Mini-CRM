@@ -5,8 +5,9 @@ type Task struct {
 	ClientID   int64
 	ClientName string
 
-	Title    string
-	Status   string
-	Priority string
-	Progress int
+	Title       string
+	Status      string
+	Owner       string
+	Tag         string
+	Archived    bool
 }
