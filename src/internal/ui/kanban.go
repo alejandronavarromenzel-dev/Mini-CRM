@@ -15,6 +15,7 @@ func kanbanView() fyne.CanvasObject {
 	statuses := []string{"Por hacer", "En curso", "Hecho"}
 
 	makeColumn := func(status string) fyne.CanvasObject {
+		var selectedIndex = -1
 		tasks := loadTasksByStatus(status)
 
 		list := widget.NewList(
@@ -22,15 +23,16 @@ func kanbanView() fyne.CanvasObject {
 			func() fyne.CanvasObject { return widget.NewLabel("") },
 			func(i int, o fyne.CanvasObject) {
 				t := tasks[i]
-				o.(*widget.Label).SetText(
-					fmt.Sprintf("%s (%d%%)", t.Title, t.Progress),
-				)
+				o.(*widget.Label).SetText(fmt.Sprintf("%s (%d%%)", t.Title, t.Progress))
 			},
 		)
 
+		list.OnSelected = func(id int) {
+			selectedIndex = id
+		}
+
 		moveBtn := widget.NewButton("Mover →", func() {
-			id := list.Selected
-			if id < 0 || id >= len(tasks) {
+			if selectedIndex < 0 || selectedIndex >= len(tasks) {
 				return
 			}
 
@@ -38,8 +40,12 @@ func kanbanView() fyne.CanvasObject {
 			_, _ = db.DB.Exec(
 				"UPDATE tasks SET status=? WHERE id=?",
 				next,
-				tasks[id].ID,
+				tasks[selectedIndex].ID,
 			)
+
+			// recargar columna
+			tasks = loadTasksByStatus(status)
+			selectedIndex = -1
 			list.Refresh()
 		})
 
