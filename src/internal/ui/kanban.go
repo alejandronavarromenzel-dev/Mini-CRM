@@ -15,39 +15,44 @@ func kanbanView() fyne.CanvasObject {
 	statuses := []string{"Por hacer", "En curso", "Hecho"}
 
 	makeColumn := func(status string) fyne.CanvasObject {
-		var selectedIndex = -1
-		tasks := loadTasksByStatus(status)
+		var tasks []models.Task
+		selected := -1
 
 		list := widget.NewList(
 			func() int { return len(tasks) },
 			func() fyne.CanvasObject { return widget.NewLabel("") },
 			func(i int, o fyne.CanvasObject) {
 				t := tasks[i]
-				o.(*widget.Label).SetText(fmt.Sprintf("%s (%d%%)", t.Title, t.Progress))
+				o.(*widget.Label).SetText(
+					fmt.Sprintf("%s – %s (%d%%)", t.ClientName, t.Title, t.Progress),
+				)
 			},
 		)
 
 		list.OnSelected = func(id int) {
-			selectedIndex = id
+			selected = id
 		}
 
-		moveBtn := widget.NewButton("Mover →", func() {
-			if selectedIndex < 0 || selectedIndex >= len(tasks) {
+		refresh := func() {
+			tasks = loadKanbanTasks(status)
+			selected = -1
+			list.Refresh()
+		}
+
+		moveBtn := widget.NewButton("⇒", func() {
+			if selected < 0 || selected >= len(tasks) {
 				return
 			}
-
 			next := nextStatus(status)
 			_, _ = db.DB.Exec(
 				"UPDATE tasks SET status=? WHERE id=?",
 				next,
-				tasks[selectedIndex].ID,
+				tasks[selected].ID,
 			)
-
-			// recargar columna
-			tasks = loadTasksByStatus(status)
-			selectedIndex = -1
-			list.Refresh()
+			refresh()
 		})
+
+		refresh()
 
 		return container.NewBorder(
 			widget.NewLabel(status),
@@ -58,19 +63,22 @@ func kanbanView() fyne.CanvasObject {
 		)
 	}
 
-	cols := []fyne.CanvasObject{}
-	for _, s := range statuses {
-		cols = append(cols, makeColumn(s))
-	}
-
-	return container.NewGridWithColumns(3, cols...)
+	return container.NewGridWithColumns(
+		3,
+		makeColumn("Por hacer"),
+		makeColumn("En curso"),
+		makeColumn("Hecho"),
+	)
 }
 
-func loadTasksByStatus(status string) []models.Task {
-	rows, err := db.DB.Query(
-		`SELECT id, title, progress FROM tasks WHERE status=?`,
-		status,
-	)
+func loadKanbanTasks(status string) []models.Task {
+	rows, err := db.DB.Query(`
+		SELECT t.id, c.name, t.title, t.progress
+		FROM tasks t
+		JOIN clients c ON c.id = t.client_id
+		WHERE t.status=?
+		ORDER BY c.name, t.title
+	`, status)
 	if err != nil {
 		return nil
 	}
@@ -79,19 +87,8 @@ func loadTasksByStatus(status string) []models.Task {
 	var out []models.Task
 	for rows.Next() {
 		var t models.Task
-		rows.Scan(&t.ID, &t.Title, &t.Progress)
+		rows.Scan(&t.ID, &t.ClientName, &t.Title, &t.Progress)
 		out = append(out, t)
 	}
 	return out
-}
-
-func nextStatus(current string) string {
-	switch current {
-	case "Por hacer":
-		return "En curso"
-	case "En curso":
-		return "Hecho"
-	default:
-		return "Hecho"
-	}
 }
