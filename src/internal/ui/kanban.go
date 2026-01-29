@@ -13,55 +13,65 @@ import (
 
 func kanbanView() fyne.CanvasObject {
 
-	var refreshAll func()
+	type column struct {
+		status string
+		tasks  []models.Task
+		list   *widget.List
+	}
 
-	makeColumn := func(status string) fyne.CanvasObject {
-		var tasks []models.Task
-		selected := -1
+	columns := []*column{}
 
-		list := widget.NewList(
-			func() int { return len(tasks) },
+	makeColumn := func(status string) *column {
+		col := &column{status: status}
+
+		col.list = widget.NewList(
+			func() int { return len(col.tasks) },
 			func() fyne.CanvasObject { return widget.NewLabel("") },
 			func(i int, o fyne.CanvasObject) {
-				t := tasks[i]
+				t := col.tasks[i]
 				o.(*widget.Label).SetText(
 					fmt.Sprintf("%s – %s (%d%%)", t.ClientName, t.Title, t.Progress),
 				)
 			},
 		)
 
-		list.OnSelected = func(id int) {
-			selected = id
+		col.list.OnSelected = func(id int) {
+			col.list.Selected = id
 		}
 
-		refresh := func() {
-			tasks = loadKanbanTasks(status)
-			selected = -1
-			list.Refresh()
-		}
+		columns = append(columns, col)
+		return col
+	}
 
+	refreshAll := func() {
+		for _, c := range columns {
+			c.tasks = loadKanbanTasks(c.status)
+			c.list.Refresh()
+		}
+	}
+
+	makeColumnUI := func(c *column) fyne.CanvasObject {
 		moveBtn := widget.NewButton("⇒", func() {
-			if selected < 0 || selected >= len(tasks) {
+			id := c.list.Selected
+			if id < 0 || id >= len(c.tasks) {
 				return
 			}
 
-			next := nextKanbanStatus(status)
+			next := nextKanbanStatus(c.status)
 			_, _ = db.DB.Exec(
 				"UPDATE tasks SET status=? WHERE id=?",
 				next,
-				tasks[selected].ID,
+				c.tasks[id].ID,
 			)
 			refreshAll()
 		})
 
-		refresh()
-
 		return container.NewBorder(
-			widget.NewLabel(status),
+			widget.NewLabel(c.status),
 			moveBtn,
 			nil,
 			nil,
-			list,
+			c.list,
 		)
 	}
 
@@ -69,17 +79,16 @@ func kanbanView() fyne.CanvasObject {
 	colDoing := makeColumn("En curso")
 	colDone := makeColumn("Hecho")
 
-	refreshAll = func() {
-		colTodo.(*fyne.Container).Objects[4].(*widget.List).Refresh()
-		colDoing.(*fyne.Container).Objects[4].(*widget.List).Refresh()
-		colDone.(*fyne.Container).Objects[4].(*widget.List).Refresh()
-	}
+	refreshAll()
 
-	refreshBtn := widget.NewButton("Refrescar", func() {
-		refreshAll()
-	})
+	grid := container.NewGridWithColumns(
+		3,
+		makeColumnUI(colTodo),
+		makeColumnUI(colDoing),
+		makeColumnUI(colDone),
+	)
 
-	grid := container.NewGridWithColumns(3, colTodo, colDoing, colDone)
+	refreshBtn := widget.NewButton("Refrescar", refreshAll)
 
 	return container.NewBorder(
 		container.NewHBox(widget.NewLabel("Kanban"), refreshBtn),
