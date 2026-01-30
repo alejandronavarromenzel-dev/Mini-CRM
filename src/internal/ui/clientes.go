@@ -20,12 +20,14 @@ func clientesView() fyne.CanvasObject {
 		func() fyne.CanvasObject { return widget.NewLabel("") },
 		func(i int, o fyne.CanvasObject) {
 			c := clients[i]
-			o.(*widget.Label).SetText(fmt.Sprintf("%s (%s)", c.Name, c.Status))
+			o.(*widget.Label).SetText(
+				fmt.Sprintf("%s (%s)", c.Name, c.Status),
+			)
 		},
 	)
 
 	addBtn := widget.NewButton("Nuevo Cliente", func() {
-		showClientForm(nil, func() {
+		showClientForm(func() {
 			clients = loadClients()
 			list.Refresh()
 		})
@@ -38,20 +40,22 @@ func clientesView() fyne.CanvasObject {
 	)
 }
 
-func showClientForm(client *models.Client, onSave func()) {
+/* =========================
+   FORMULARIO
+   ========================= */
+
+func showClientForm(onSave func()) {
 	name := widget.NewEntry()
-	status := widget.NewSelect([]string{"Activo", "Prospecto", "Inactivo"}, nil)
+
+	status := widget.NewSelect(
+		[]string{"Activo", "Prospecto", "Inactivo"},
+		nil,
+	)
+	status.SetSelected("Activo") // 🔴 CRÍTICO
+
 	owner := widget.NewEntry()
 	tags := widget.NewEntry()
 	notes := widget.NewMultiLineEntry()
-
-	if client != nil {
-		name.SetText(client.Name)
-		status.SetSelected(client.Status)
-		owner.SetText(client.Owner)
-		tags.SetText(client.Tags)
-		notes.SetText(client.Notes)
-	}
 
 	items := []*widget.FormItem{
 		{Text: "Nombre", Widget: name},
@@ -61,44 +65,83 @@ func showClientForm(client *models.Client, onSave func()) {
 		{Text: "Notas", Widget: notes},
 	}
 
-	dialog.ShowForm("Cliente", "Guardar", "Cancelar", items, func(ok bool) {
-		if !ok {
-			return
-		}
-		if name.Text == "" {
-			dialog.ShowError(fmt.Errorf("el nombre es obligatorio"), w)
-			return
-		}
+	dialog.ShowForm(
+		"Nuevo cliente",
+		"Guardar",
+		"Cancelar",
+		items,
+		func(ok bool) {
+			if !ok {
+				return
+			}
 
-		saveClient(&models.Client{
-			Name:   name.Text,
-			Status: status.Selected,
-			Owner:  owner.Text,
-			Tags:   tags.Text,
-			Notes:  notes.Text,
-		})
-		onSave()
-	}, w)
-}
+			if name.Text == "" {
+				dialog.ShowError(
+					fmt.Errorf("el nombre es obligatorio"),
+					w,
+				)
+				return
+			}
 
-func saveClient(c *models.Client) {
-	_, _ = db.DB.Exec(
-		`INSERT INTO clients (name, status, owner, tags, notes) VALUES (?,?,?,?,?)`,
-		c.Name, c.Status, c.Owner, c.Tags, c.Notes,
+			err := saveClient(&models.Client{
+				Name:   name.Text,
+				Status: status.Selected,
+				Owner:  owner.Text,
+				Tags:   tags.Text,
+				Notes:  notes.Text,
+			})
+			if err != nil {
+				dialog.ShowError(err, w)
+				return
+			}
+
+			if onSave != nil {
+				onSave()
+			}
+		},
+		w,
 	)
 }
 
+/* =========================
+   DB
+   ========================= */
+
+func saveClient(c *models.Client) error {
+	_, err := db.DB.Exec(
+		`INSERT INTO clients (name, status, owner, tags, notes)
+		 VALUES (?,?,?,?,?)`,
+		c.Name,
+		c.Status,
+		c.Owner,
+		c.Tags,
+		c.Notes,
+	)
+	return err
+}
+
 func loadClients() []models.Client {
-	rows, err := db.DB.Query(`SELECT id, name, status, owner, tags, notes FROM clients ORDER BY name`)
+	rows, err := db.DB.Query(
+		`SELECT id, name, status, owner, tags, notes
+		 FROM clients
+		 ORDER BY name`,
+	)
 	if err != nil {
-		return nil
+		return []models.Client{}
 	}
 	defer rows.Close()
 
 	var out []models.Client
 	for rows.Next() {
 		var c models.Client
-		rows.Scan(&c.ID, &c.Name, &c.Status, &c.Owner, &c.Tags, &c.Notes)
+		rows.Scan(
+			&c.ID,
+			&c.Name,
+			&c.Status,
+			&c.Owner,
+			&c.Tags,
+			&c.Notes,
+		)
 		out = append(out, c)
 	}
 	return out
